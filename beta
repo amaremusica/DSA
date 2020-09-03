@@ -1,0 +1,188 @@
+
+
+#include <DSA.h>
+#include "Nextion.h"
+
+byte opcode;    // Received opcode
+byte parameter; // Received parameter
+uint32_t timProcent;
+
+NexButton s1 = NexButton(0, 6, "b10"); //skip
+NexButton s2 = NexButton(0, 5, "b11");//przewin
+NexButton s3 = NexButton(0, 1, "b12");//stop
+NexButton s4 = NexButton(0, 2, "b13");//play
+NexButton s5 = NexButton(0, 7, "b14");
+NexButton s6 = NexButton(0, 3, "b15");//next
+NexButton s7 = NexButton(0, 19, "b18");//pausa
+NexButton s8 = NexButton(0, 16, "b17");//next
+NexProgressBar tim = NexProgressBar(0, 14, "j0");
+NexNumber sekundy = NexNumber(0, 8, "n1");         //sekundy
+NexNumber minuty = NexNumber(0, 4, "n0");          ///minuty
+NexNumber track = NexNumber(0, 9, "n2");           //track
+NexNumber alltrack = NexNumber(0, 10, "n3");         //all track
+NexNumber alltime = NexNumber(0, 17, "n4");          //all time
+NexText t4 = NexText(0, 18, "t4");
+
+NexTouch *nex_listen_list[] = {
+  &s1,
+  &s2,
+  &s3,
+  &s4,
+  &s5,
+  &s6,
+  &s7,
+  &s8,
+  &t4,
+  NULL
+};
+
+// Pause state
+bool paused;
+
+// Returned values from CD-Pro2M/LF
+int numberOfTracks;
+int actualTitle;
+int actualMinutes;
+int actualSeconds;
+int completeTime;
+int newabsminutes;
+int DISC_SECONDS;
+int xx;
+int Absolutetimeminutes;
+int ClearTOC;
+int DISC_MINUTES;
+int DISC_FRAMES;
+int MAX_TITLE;
+int SCAN_TIME;
+int MIN_TITLE;
+int test;
+int DACMODE;
+int Lengthoftitle;
+    int calyCzas;
+    
+int TOC_DISC_MINUTES;
+DSA myDSA(2, 3, 4); // Create a DSA controller and define the used pins
+
+void s1Pop(void*ptr) {
+  (!myDSA.sendMessage(0x50, actualTitle - 1));//////skip
+
+}
+
+void s2Pop(void*pt)  {
+  (!myDSA.sendMessage(0x07, 00));  ////przwi
+
+}
+
+void s3Pop(void*pt)  {
+  (!myDSA.sendMessage(0x02, actualTitle ));///stop
+
+}
+
+void s4Pop(void*pt)  {
+  (!myDSA.sendMessage(0x01, 1));
+  delay(10);
+  (myDSA.sendMessage(0x09, actualTitle));///play
+}
+
+void s5Pop(void*pt)  {
+  (!myDSA.sendMessage(0x06, 00)); //przdwiń przód
+
+}
+
+void s6Pop(void*pt) {
+  
+  
+  (!myDSA.sendMessage(0x01, actualTitle + 1));
+   delay(10);
+  (myDSA.sendMessage(0x09, actualTitle));// next
+
+}
+void s7Pop(void*pt) {
+ (myDSA.sendMessage(0x09, actualTitle));/////pauza
+ alltime.setValue(Lengthoftitle);
+ 
+
+}
+
+void s8Pop(void*pt) {
+ 
+  minuty.setValue(0);
+  sekundy.setValue(0);
+  track.setValue(0);
+  timProcent = 0;
+  (myDSA.sendMessage(0x09, 1));
+ (myDSA.sendMessage(0x03, actualTitle));
+ tim.setValue(0);
+// (myDSA.sendMessage(0x6A , 00));
+ 
+
+
+}
+
+void setup() {
+  Serial.begin(9600);
+  nexInit();
+  s1.attachPop(s1Pop);
+  s2.attachPop(s2Pop);
+  s3.attachPop(s3Pop);
+  s4.attachPop(s4Pop);
+  s5.attachPop(s5Pop);
+  s6.attachPop(s6Pop);
+  s7.attachPop(s7Pop);
+  s8.attachPop(s8Pop);
+  paused = false;
+ 
+
+}
+
+void loop() {
+  
+  {
+     alltime.setValue(Lengthoftitle);
+
+   calyCzas =  (Lengthoftitle  - actualSeconds -actualMinutes*60 );
+    tim.setValue(calyCzas);
+    alltrack.setValue(calyCzas);
+    timProcent++;
+    if (timProcent == Lengthoftitle ); {
+      timProcent = 0;
+       
+    }
+    delay(200);
+  }
+  nexLoop(nex_listen_list);
+
+  if (myDSA.transmitRequested()) {
+    if (myDSA.receiveMessage(&opcode, &parameter)) {
+      switch (opcode) {
+          switch (parameter)
+            break;
+        case 0x10:  //Actual title
+          actualTitle = parameter;
+          track.setValue(parameter);
+          break;
+        case 0x12:  //Actual minutes
+          actualMinutes = parameter;
+          minuty.setValue(parameter); 
+          break;
+        case 0x13:  //Actual seconds
+          actualSeconds = parameter;
+          sekundy.setValue(parameter);
+          break;        
+        case 0x21:  //Title maximum
+          numberOfTracks = parameter;
+          alltrack.setValue(parameter);
+          break;
+          break;        
+        case 0x09: 
+          Lengthoftitle = parameter;
+   //       alltime.setValue(parameter);
+          Serial.println(Lengthoftitle);
+          break;
+        default: 
+          break;
+        
+      }
+    }
+  }
+}
