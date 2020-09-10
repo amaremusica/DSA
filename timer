@@ -1,43 +1,182 @@
-const unsigned int UpdateInterval = 1000;
 
-unsigned long lastUpdate;
 
-byte hour;
-byte minute;
-byte second;
 
-void setup(){
-  Serial.begin(115200);
+#include "Nextion.h"
+#include <Controllino.h>
+#define PK1 CONTROLLINO_R0
+#define PK2 CONTROLLINO_R1
+#define PK3 CONTROLLINO_R2
+#define PK4 CONTROLLINO_R3
+#define PK5 CONTROLLINO_R4
+#include <Timers.h>
+
+
+///////////////////////////
+
+float czas2;
+short strona = 0;
+uint32_t timProcent;
+int czasStart;
+int etap = 0;
+Timer odliczanie;
+
+unsigned long timeToEnd = odliczanie.time();
+unsigned long timeoutTime = SECS(40);
+
+
+
+
+///////////////////////////
+
+////////////////////////////////////////////////////////BUTONY
+NexButton b0 = NexButton(0, 1, "b0"); //przycisk startu
+NexButton b3 = NexButton(1, 1, "b0");  /// POWRÓT 
+NexDSButton sw0 = NexDSButton(2, 2, "sw0");
+NexDSButton sw1 = NexDSButton(2, 3, "sw1");
+NexDSButton sw2 = NexDSButton(2, 4, "sw2");
+NexDSButton sw3 = NexDSButton(2, 6, "sw3");
+////////////////////////////////////////////////////////BUTONY
+NexNumber czas = NexNumber(0, 3, "n0");
+
+///////////////////////////////////////////////////////PROGRESBAR
+NexProgressBar tim = NexProgressBar(0, 2, "j0");
+///////////////////////////////////////////////////////PROGRESBAR
+
+//declare pages:
+NexPage START = NexPage(0, 0, "START");  // Page added as a touch event
+NexPage HOME = NexPage(1, 0, "HOME");  // Page added as a touch event
+NexPage SETTINGS = NexPage(2, 0, "SETTINGS");  // Page added as a touch event
+
+NexTouch *nex_listen_list[] = {
+  &b0,
+  &b3,
+  &sw0,
+  &sw1,
+  &sw2,
+  &sw3,
+  &START,  // Page added as a touch event
+  &HOME,  // Page added as a touch event
+  &SETTINGS,  // Page added as a touch event
+  NULL
+};
+
+
+void STARTPushCallback(void *ptr)
+{
+  strona = 0;
 }
 
-void loop(){
-  if(millis() - lastUpdate >= UpdateInterval){
-    lastUpdate += UpdateInterval;
+void WORKPushCallback(void *ptr)
+{
+  strona = 1;
+}
+
+void SETTINGSPushCallback(void *ptr)
+{
+  strona = 2;
+}
+////////////////////////
+
+void ON(void*ptr) { 
+ etap = 1;
+}
+
+
+ 
+
+ void POW(void*ptr) {
+    
+ digitalWrite(PK1, 0);
+ strona = 0;
+  Serial2.print("page 0");
+      Serial2.write(0xff);
+      Serial2.write(0xff);
+      Serial2.write(0xff);
+      delay(200);
+}
+ 
+ void SW0(void*ptr) {
+ uint32_t dual_state;
+ sw0.getValue(&dual_state);
+ if(dual_state){digitalWrite(PK2, HIGH);}else{digitalWrite(PK2, LOW);}
+ }
+ 
+  void SW1(void*ptr) {
+  uint32_t dual_state;
+ sw1.getValue(&dual_state);
+ if(dual_state){digitalWrite(PK3, HIGH);}else{digitalWrite(PK3, LOW);}
+ }
+ 
+  void SW2(void*ptr) {
+    uint32_t dual_state;
+ sw2.getValue(&dual_state);
+ if(dual_state){digitalWrite(PK4, HIGH);}else{digitalWrite(PK4, LOW);}
+ }
+ 
+ void SW3(void*ptr) {
+ uint32_t dual_state; 
+  sw3.getValue(&dual_state);
+ if(dual_state){digitalWrite(PK5, HIGH);}else{digitalWrite(PK5, LOW);}
+ }
+ 
+ 
+void setup() {
+  nexInit();
+  Serial2.begin(9600);  // Start serial comunication at baud=9600
+  delay(500);  // This dalay is just in case the nextion display didn't start yet
+  Serial2.print("baud=115200");  // Set new baud rate of nextion to 115200, but it's temporal.
+  Serial2.write(0xff);
+  Serial2.write(0xff);
+  Serial2.write(0xff);
+  
+  Serial2.end();  // End the serial comunication of baud=9600
+  
+  Serial2.begin(115200);
+  Serial1.begin(115200);
+  odliczanie.begin(SECS(10));
+  
+  START.attachPush(STARTPushCallback);  // Page press event
+  HOME.attachPush(WORKPushCallback);  // Page press event
+  SETTINGS.attachPush(SETTINGSPushCallback);  // Page press event
+  ////////////////////////////////////////////// BUTONY
+     b0.attachPop(ON);
+     b3.attachPop(POW);
+     sw0.attachPop(SW0);
+     sw1.attachPop(SW1);
+     sw2.attachPop(SW2);
+     sw3.attachPop(SW3);
+  
+  //DEKLARACJA WYJŚĆ
+  pinMode(PK1, OUTPUT);
+  pinMode(PK2, OUTPUT);
+  pinMode(PK3, OUTPUT);
+  pinMode(PK4, OUTPUT);
+  pinMode(PK5, OUTPUT);
+}
+
+void loop() {
    
-    second++;
+    if (++czas2 == ); {
+     czas2 = 0;
+  nexLoop(nex_listen_list);
+ 
+  switch (etap) {
+    case 1:
+    czas2 = odliczanie.time();
+    czas.setValue((czas2)/600);
+    tim.setValue((czas2)/600);
+     if (odliczanie.available()) {
+     tim.setValue(czas2)/60;
    
-    if(second == 60){
-      second = 0;
-      minute++;
+      digitalWrite(PK1, 1);
+ strona = 0;
+  Serial2.print("page 1");
+      Serial2.write(0xff);
+      Serial2.write(0xff);
+      Serial2.write(0xff);
+      odliczanie.restart();
+      break;
+}
+}
     }
-    if(minute == 60){
-      minute = 0;
-      hour++;
-    }
-    if(hour == 24){
-      hour = 0;
-    }
-   
-    Serial.print(hour);
-    Serial.print(':');
-    if(minute < 10){
-      Serial.print('0');
-    }
-    Serial.print(minute);
-    Serial.print(':');
-    if(second < 10){
-      Serial.print('0');
-    }
-    Serial.print(second);
-  }
 }
