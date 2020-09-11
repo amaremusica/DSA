@@ -11,17 +11,19 @@
 #include <Timers.h>
 
 
+
 ///////////////////////////
 
-float czas2;
+double czas2;
 short strona = 0;
 uint32_t timProcent;
 int czasStart;
 int etap = 0;
 Timer odliczanie;
+Timer odliczanie2;
 
 unsigned long timeToEnd = odliczanie.time();
-unsigned long timeoutTime = SECS(40);
+
 
 
 
@@ -82,19 +84,27 @@ void ON(void*ptr) {
 }
 
 
- 
-
  void POW(void*ptr) {
     
- digitalWrite(PK1, 0);
- strona = 0;
-  Serial2.print("page 0");
+       digitalWrite(PK1, 0);
+      Serial2.print("page 0");
       Serial2.write(0xff);
       Serial2.write(0xff);
       Serial2.write(0xff);
       delay(200);
+ }
+
+void wyslij(String obiekt, unsigned int wartosc) {// wysyłanie do NExtiona
+  Serial2.print(obiekt);
+  Serial2.print("=");
+  Serial2.print(wartosc);
+  Serial2.write(0xff);
+  Serial2.write(0xff);
+  Serial2.write(0xff);
+  delay(50);
+  return;
 }
- 
+
  void SW0(void*ptr) {
  uint32_t dual_state;
  sw0.getValue(&dual_state);
@@ -134,6 +144,7 @@ void setup() {
   Serial2.begin(115200);
   Serial1.begin(115200);
   odliczanie.begin(SECS(10));
+  odliczanie2.begin(SECS(15));
   
   START.attachPush(STARTPushCallback);  // Page press event
   HOME.attachPush(WORKPushCallback);  // Page press event
@@ -155,28 +166,31 @@ void setup() {
 }
 
 void loop() {
-   
-    if (++czas2 == ); {
-     czas2 = 0;
+  
   nexLoop(nex_listen_list);
  
   switch (etap) {
     case 1:
     czas2 = odliczanie.time();
-    czas.setValue((czas2)/600);
-    tim.setValue((czas2)/600);
-     if (odliczanie.available()) {
-     tim.setValue(czas2)/60;
-   
+    wyslij("n0.val", timeToEnd);
+    wyslij("j0.val", (100 -(czas2)/100));
+    if (odliczanie.available()) {    
       digitalWrite(PK1, 1);
- strona = 0;
-  Serial2.print("page 1");
+      Serial2.print("page 1");
       Serial2.write(0xff);
       Serial2.write(0xff);
       Serial2.write(0xff);
-      odliczanie.restart();
+      odliczanie.time(STOP);
+  
       break;
-}
-}
     }
+      case 2:
+      if (odliczanie2.available()) {  
+      digitalWrite(PK2, 1);  
+      odliczanie2.time(STOP);
+      break;
+   
 }
+}
+
+ }
